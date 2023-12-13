@@ -1,0 +1,497 @@
+---
+title: "Sports Analytics Project"
+author: "Jack Arbuckle, Ian Pezzella, and Reuben Dayal"
+date: "2023-10-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load Packages:
+library(tidyverse)
+library(ggplot2) # Load ggplot2
+library(ggdark) # Load ggdark
+library(ggimage) # Load ggimage
+library(reshape) # Load reshape
+library(ggridges) # Load ggridges
+library(ggrepel) # Load ggrepellibrary(tidyverse) # Load tidyverse
+library(GGally) # Load GGally
+
+```
+
+```{r}
+# Load Functions:
+source("sports_analytics_functions.r")
+#source("pbp_functions.r")
+```
+
+
+```{r}
+load("team_logos.rda")
+```
+
+
+```{r}
+library(cfbfastR)
+# Load data
+cfb_2023 <- load_cfb_pbp(seasons = 2023, weeks = c(1, 2, 3,4,5,6,7,8,9,10,11))
+class(cfb_2023)
+# Convert to data frame
+cfb_2023 <- as.data.frame(cfb_2023)
+```
+
+
+```{r}
+# Create summarized play type
+s_play_type <- create_simplex_play_type(cfb_2023)
+# Add summarized play type back to dataset
+cfb_2023$playtype <- s_play_type
+```
+
+
+```{r}
+# Create team level summary
+team_summary <- create_team_summary(pbp = cfb_2023, # Set dataset
+                                team_logos = team_logos) # Set logos to 
+```
+
+The first few columns relate to team level information
+
+
+* team_id - The ID code for each team
+* school - The school name
+* color - The school primary color
+* alt_color - The school alternative color
+* logos - Link to the school logo image
+* games - The number of games played so far
+
+The next few columns relate to the offensive performance of the school:
+
+* pass_n - Number of passes thrown
+* pass_yards - Total pass yards 
+* pass_epa - Total pass EPA (Expected points added)
+* pass_wpa - Total pass WPA (Win probability added)
+
+* rush_n - Number of rushes
+* rush_yards - Total rush yards
+* rush_epa - Total rush EPA (Expected points added)
+* rush_wpa - Total Rush WPA (Win probability added)
+
+We then have the offensive statistics at a per play level:
+
+* pass_yards_per_play - Pass yards per play    
+* pass_epa_per_play - Pass EPA (Expected points added) per play
+* pass_wpa_per_play - Pass WPA (Win probability added) per play
+
+* rush_yards_per_play - Rush yards_per_play
+* rush_epa_per_play - Rush EPA (Expected points added) per play
+* rush_wpa_per_play - Rush WPA (Win probability added) per play     
+
+The next set of columns relate to the defensive performance of the school:
+
+* pass_n_def - Number of passes defended
+* pass_yards_def - Total pass yards against
+* pass_epa_def - Total pass EPA against (Expected points added)
+* pass_wpa_def - Total pass WPA against (Win probability added)
+
+* rush_n_def - Number of rushes defended
+* rush_yards_def - Total rush yards against
+* rush_epa_def - Total rush EPA against (Expected points added)
+* rush_wpa_def - Total rush WPA against (Win probability added)
+ 
+Finally we have the defensive statistics at a per play level:
+
+* pass_yards_per_play_def - Pass yards against per play
+* pass_epa_per_play_def - Pass EPA against (Expected points added) per play
+* pass_wpa_per_play_def - Pass WPA against (Win probability added) per play
+
+* rush_yards_per_play_def - Rush yards against per play
+* rush_epa_per_play_def - Rush EPA against (Expected points added) per play
+* rush_wpa_per_play_def - Rush WPA against (Win probability added) per play
+
+
+```{r}
+CFP_schools <- team_summary %>%
+  filter(school %in% c('Washington', 'Ohio State', 'Michigan','Florida State', 'Georgia'))
+
+CFP_schools
+```
+Power Five Opponents
+```{r}
+wash_opponents <- team_summary %>%
+  filter(school %in% c('Michigan State', 'Colorado', 'Arizona', 'Oregon','Arizona State','Stanford', 'USC', 'Utah'))
+wash_opponents
+
+osu_opponents <- team_summary %>%
+  filter(school %in% c('Indiana', 'Notre Dame', 'Maryland', 'Purdue', 'Penn State', 'Wisconsin', 'Rutgers', 'Michigan State'))
+osu_opponents
+
+uga_opponents <- team_summary %>%
+  filter(school %in% c('South Carolina', 'Auburn', 'Kentucky', 'Vanderbilt', 'Florida','Missouri', 'Ole Miss'))
+uga_opponents
+
+fsu_opponents <- team_summary %>%
+  filter(school %in% c('Louisiana', 'Boston College', 'Clemson','Virginia Tech', 'Syracuse', 'Duke', 'Wake Forest', 'Pittsburgh','Miami'))
+fsu_opponents
+
+mich_opponents <- team_summary %>%
+  filter(school %in% c('Rutgers', 'Nebraska', 'Minnesota','Indiana', 'Michigan State', 'Purdue', 'Penn State'))
+mich_opponents
+```
+
+
+```{r}
+average_fsu<- c((mean(fsu_opponents$pass_epa_per_play)),(mean(fsu_opponents$pass_epa_per_play_def)), (mean(fsu_opponents$rush_epa_per_play_def)), (mean(fsu_opponents$rush_epa_per_play)))
+
+average_mich<- c((mean(mich_opponents$pass_epa_per_play)),(mean(mich_opponents$pass_epa_per_play_def)), (mean(mich_opponents$rush_epa_per_play_def)),(mean(mich_opponents$rush_epa_per_play)))
+
+average_osu<- c((mean(osu_opponents$pass_epa_per_play)),(mean(osu_opponents$pass_epa_per_play_def)), (mean(osu_opponents$rush_epa_per_play_def)), (mean(osu_opponents$rush_epa_per_play)))
+
+average_uga<- c((mean(uga_opponents$pass_epa_per_play)),(mean(uga_opponents$pass_epa_per_play_def)), (mean(uga_opponents$rush_epa_per_play_def)), (mean(uga_opponents$rush_epa_per_play)))
+
+average_wash<- c((mean(wash_opponents$pass_epa_per_play)),(mean(wash_opponents$pass_epa_per_play_def)), (mean(wash_opponents$rush_epa_per_play_def)), (mean(wash_opponents$rush_epa_per_play)))
+
+
+all_opponents_avg <- data.frame(
+  school = c("Florida State", "Michigan", "Washington", "Ohio State", "Georgia"),
+  opp_pass_epa_per_play = c(average_fsu[1], average_mich[1], average_wash[1], average_osu[1], average_uga[1]),
+  opp_pass_epa_per_play_def = c(average_fsu[2], average_mich[2], average_wash[2], average_osu[2], average_uga[2]),
+  opp_rush_epa_per_play_def = c(average_fsu[3], average_mich[3], average_wash[3], average_osu[3], average_uga[3]),
+  opp_rush_epa_per_play = c(average_fsu[4], average_mich[4], average_wash[4], average_osu[4], average_uga[4]))
+  
+all_opponents_avg <- merge(all_opponents_avg, CFP_schools, by = "school")
+
+
+
+
+# Display the resulting data frame
+print(all_opponents_avg)
+```
+
+
+
+```{r}
+# Create plot
+OPP_Def_EPA_Per_Play_plot <- ggplot(data = all_opponents_avg, # Set dataset
+                 aes(x = opp_pass_epa_per_play_def, # Set x-axis variable
+                     y = opp_rush_epa_per_play_def)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+   labs(x = "Opponents Pass EPA DEF Per Play", # Add labels
+       y = "Opponents Rush EPA Def Per Play",
+       title = "Opponents: Rush v Pass EPA Def Per Play",
+       subtitle = "Higher EPA indicates team has played weaker defenses") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(OPP_Def_EPA_Per_Play_plot, file = 'OPP_Def_EPA_Per_Play_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+```{r}
+# Create plot
+OPP_Off_EPA_Per_Play_plot <- ggplot(data = all_opponents_avg, # Set dataset
+                 aes(x = opp_pass_epa_per_play, # Set x-axis variable
+                     y = opp_rush_epa_per_play)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+   labs(x = "Opponent Pass EPA Per Play", # Add labels
+       y = "Opponent Rush EPA Def Per Play",
+       title = "Opponents: Rush v Pass EPA Per Play",
+       subtitle = "Higher EPA indicates team has played stronger offenses")
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(OPP_Off_EPA_Per_Play_plot, file = 'OPP_Off_EPA_Per_Play_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+```{r}
+# Create plot
+Off_EPA_Per_Play_plot <- ggplot(data = CFP_schools, # Set dataset
+                 aes(x = rush_epa_per_play, # Set x-axis variable
+                     y = pass_epa_per_play)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Rush EPA Per Play", # Add labels
+       y = "Pass EPA Per Play",
+       title = "Rush v Pass EPA Per Play",
+       subtitle = "Higher EPA indicates stronger offense") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+ggsave(Off_EPA_Per_Play_plot, file = 'Off_EPA_Per_Play_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+
+```{r}
+# Create plot
+Def_EPA_Per_Play_plot <- ggplot(data = CFP_schools, # Set dataset
+                 aes(x = rush_epa_per_play_def, # Set x-axis variable
+                     y = pass_epa_per_play_def)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Rush EPA DEF Per Play", # Add labels
+       y = "Pass EPA DEF Per Play",
+       title = "Rush v Pass EPA DEF Per Play",
+       subtitle = "Lower EPA indicates stronger defense") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(Def_EPA_Per_Play_plot, file = 'Def_EPA_Per_Play_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+```{r}
+number_of_passvsrush_plays_plot <- ggplot(data = CFP_schools, # Set dataset
+                 aes(x = rush_n, # Set x-axis variable
+                     y = pass_n)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Number of Rushes", # Add labels
+       y = "Number of Passes",
+       title = "Rush v Passing Plays",
+       subtitle = "CFB 2023") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(number_of_passvsrush_plays_plot, file = 'number_of_passvsrush_plays_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+Create weighted EPA for all teams based on Schedule
+```{r}
+weighted_off_def <- all_opponents_avg %>%
+  mutate(weighted_passing_off = 10*((1/(0.5+opp_pass_epa_per_play_def))*(pass_epa_per_play+0.5)))%>%
+mutate(weighted_rushing_off = 10*((1/(0.5+opp_rush_epa_per_play_def)) * (rush_epa_per_play+0.5)))%>%
+  mutate(weighted_passing_def = 10*((1/(0.5+opp_pass_epa_per_play)) * (pass_epa_per_play_def+0.5)))%>%
+  mutate(weighted_rushing_def = 10*((1/(0.5+opp_rush_epa_per_play)) * (rush_epa_per_play_def+0.5)))
+
+weighted_off_def
+```
+
+
+
+```{r}
+weighted_off_plot<- ggplot(data = weighted_off_def, # Set dataset
+                 aes(x = weighted_off_def$weighted_rushing_off, # Set x-axis variable
+                     y = weighted_off_def$weighted_passing_off)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Weighted Rushing Offense", # Add labels
+       y = "Weighted Passing Offense",
+       title = "Weighted Offense",
+       subtitle = "CFB 2023") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+ggsave(weighted_off_plot, file = 'Weighted_Off_Plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+
+```{r}
+
+weighted_def_plot <- ggplot(data = weighted_off_def, # Set dataset
+                 aes(x = weighted_off_def$weighted_rushing_def, # Set x-axis variable
+                     y = weighted_off_def$weighted_passing_def)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Weighted Rushing Defense", # Add labels
+       y = "Weighted Passing Defense",
+       title = "Weighted Defense",
+       subtitle = "CFB 2023") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(weighted_def_plot, file = 'Weighted_Def_Plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+
+```{r}
+weighted_pass_defvsoff_plot <- ggplot(data = weighted_off_def, # Set dataset
+                 aes(x = weighted_off_def$weighted_passing_def, # Set x-axis variable
+                     y = weighted_off_def$weighted_passing_off)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Weighted Passing Defense", # Add labels
+       y = "Weighted Passing Offense",
+       title = "Passing Def vs Passing Off",
+       subtitle = "CFB 2023") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(weighted_pass_defvsoff_plot, file = 'weighted_pass_defvsoff.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+
+```{r}
+weighted_rush_defvsoff_plot <- ggplot(data = weighted_off_def, # Set dataset
+                 aes(x = weighted_off_def$weighted_rushing_def, # Set x-axis variable
+                     y = weighted_off_def$weighted_rushing_off)) + # Set y-axis variable
+  geom_point() + # Set geom point to create scatter plot
+  geom_image(image = CFP_schools$logos, asp = 16/9) + # Add logos
+  dark_theme_bw() + # Set dark theme
+   labs(x = "Weighted Rushing Defense", # Add labels
+       y = "Weighted Rushing Offense",
+       title = "Rushing Def vs Rushing Off",
+       subtitle = "CFB 2023") 
+
+# Turn off dark mode
+invert_geom_defaults()
+
+
+ggsave(weighted_rush_defvsoff_plot, file = 'weighted_rush_defvsoff.jpg', width = 10, height = 10, dpi = 600)
+```
+
+```{r}
+washvsosu <- weighted_off_def %>%
+  filter(school %in% c("Washington", "Ohio State"))%>%
+mutate(Wash_Passing_Off = 10*(weighted_passing_off[2] * weighted_passing_def[1]))%>%
+mutate(Wash_Rushing_Off = 10*(weighted_rushing_off[2] * weighted_rushing_def[1]))%>%
+mutate(OSU_Passing_Off = 10*(weighted_passing_off[1] * weighted_passing_def[2]))%>%
+mutate(OSU_Rushing_Off = 10*(weighted_rushing_off[1] * weighted_rushing_def[2]))
+
+```
+
+
+```{r}
+selected_columns <- c("Wash_Passing_Off", "Wash_Rushing_Off", "OSU_Passing_Off", "OSU_Rushing_Off")
+
+# Melt the dataframe to long format for easier plotting
+melted_data_osu <- melt(washvsosu, id.vars = "school", measure.vars = selected_columns)
+
+selected_rows_osu <- melted_data_osu %>%
+  slice(c(2, 4, 5, 7))
+
+# Create a grouped bar plot
+washvsosu_plot<- ggplot(selected_rows_osu, aes(x = variable, y = value,fill = school)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Offense: Washington vs. Ohio State",
+       x = "Offense Rating", y = "Values") +
+  scale_fill_manual(values = c("firebrick1", "purple")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+washvsosu_plot
+
+ggsave(washvsosu_plot, file = 'washvsosu_plot.jpg', width = 10, height = 10, dpi = 600)
+
+```
+```{r}
+washvsmich <- weighted_off_def %>%
+  filter(school %in% c("Washington", "Michigan"))%>%
+mutate(Wash_Passing_Off = 10*(weighted_passing_off[2] * weighted_passing_def[1]))%>%
+mutate(Wash_Rushing_Off = 10*(weighted_rushing_off[2] * weighted_rushing_def[1]))%>%
+mutate(Mich_Passing_Off = 10*(weighted_passing_off[1] * weighted_passing_def[2]))%>%
+mutate(Mich_Rushing_Off = 10*(weighted_rushing_off[1] * weighted_rushing_def[2]))
+
+selected_columns <- c("Wash_Passing_Off", "Wash_Rushing_Off", "Mich_Passing_Off", "Mich_Rushing_Off")
+
+# Melt the dataframe to long format for easier plotting
+melted_data_mich <- melt(washvsmich, id.vars = "school", measure.vars = selected_columns)
+
+selected_rows_mich <- melted_data_mich %>%
+  slice(c(2, 4, 5, 7))
+
+# Create a grouped bar plot
+washvsmich_plot <- ggplot(selected_rows_mich, aes(x = variable, y = value, fill = school)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  dark_theme_bw() + # Set dark theme
+  labs(title = "Comparison of Offense: Washington vs. Michigan",
+       x = "Offense Rating", y = "Values") +
+  scale_fill_manual(values = c("navy", "purple")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+washvsmich_plot
+
+ggsave(washvsmich_plot, file = 'washvsmich_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+```{r}
+washvsfsu <- weighted_off_def %>%
+  filter(school %in% c("Washington", "Florida State"))%>%
+mutate(Wash_Passing_Off = 10*(weighted_passing_off[2] * weighted_passing_def[1]))%>%
+mutate(Wash_Rushing_Off = 10*(weighted_rushing_off[2] *weighted_rushing_def[1]))%>%
+mutate(FSU_Passing_Off = 10*(weighted_passing_off[1] * weighted_passing_def[2]))%>%
+mutate(FSU_Rushing_Off = 10*(weighted_rushing_off[1] * weighted_rushing_def[2]))
+
+selected_columns <- c("Wash_Passing_Off", "Wash_Rushing_Off", "FSU_Passing_Off", "FSU_Rushing_Off")
+
+# Melt the dataframe to long format for easier plotting
+melted_data_fsu <- melt(washvsfsu, id.vars = "school", measure.vars = selected_columns)
+
+selected_rows_fsu <- melted_data_fsu %>%
+  slice(c(2, 4, 5, 7))
+
+# Create a grouped bar plot
+washvsfsu_plot<- ggplot(selected_rows_fsu, aes(x = variable, y = value, fill = school)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Offense: Washington vs. Florida State",
+       x = "Offense Rating", y = "Values") +
+  scale_fill_manual(values = c("darkred", "purple")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+washvsfsu_plot
+
+ggsave(washvsfsu_plot, file = 'washvsfsu_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+```{r}
+washvsuga <- weighted_off_def %>%
+  filter(school %in% c("Washington", "Georgia"))%>%
+mutate(Wash_Passing_Off = 10*(weighted_passing_off[2] * weighted_passing_def[1]))%>%
+mutate(Wash_Rushing_Off = 10*(weighted_rushing_off[2] * weighted_rushing_def[1]))%>%
+mutate(UGA_Passing_Off = 10*(weighted_passing_off[1] * weighted_passing_def[2]))%>%
+mutate(UGA_Rushing_Off = 10*(weighted_rushing_off[1] * weighted_rushing_def[2]))
+
+selected_columns <- c("Wash_Passing_Off", "Wash_Rushing_Off", "UGA_Passing_Off", "UGA_Rushing_Off")
+
+# Melt the dataframe to long format for easier plotting
+melted_data_uga <- melt(washvsuga, id.vars = "school", measure.vars = selected_columns)
+
+selected_rows_uga <- melted_data_uga %>%
+  slice(c(2, 4, 5, 7))
+
+# Create a grouped bar plot
+washvsuga_plot <- ggplot(selected_rows_uga, aes(x = variable, y = value, fill = school)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Comparison of Offense: Washington vs. Georgia",
+       x = "Offense Rating") +
+  scale_fill_manual(values = c("red", "purple")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+washvsuga_plot
+
+ggsave(washvsuga_plot, file = 'washvsuga_plot.jpg', width = 10, height = 10, dpi = 600)
+```
+
+
+
